@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!--
+    // BabySlideChat - a GPT Chat editor add-on for Google Slides
+    // Copyright (C) 2023  Asaf Prihadash TailorVJ.com
+
+    // This program is free software: you can redistribute it and/or modify
+    // it under the terms of the GNU Affero General Public License as
+    // published by the Free Software Foundation, either version 3 of the
+    // License, or (at your option) any later version.
+    -->
+    <base target="_top">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Material+Icons&display=block" rel="stylesheet">
+    <link href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+  }
+
+  #messagesDisplay {
+    overflow-y: auto;
+    padding: 8px;
+    border: 1px solid #ccc;
+    margin-bottom: 8px;
+    max-height: calc(100% - 69px); /* Set max-height */
+  }
+
+
+  .message {
+    display: flex;
+    background-color: #f1f1f1;
+    border-radius: 5px;
+    padding: 8px;
+    margin-bottom: 8px;
+    box-sizing: border-box;
+  }
+
+  .profile-picture {
+    border-radius: 50%;
+    height: 40px;
+    width: 40px;
+    margin-right: 8px;
+  }
+
+  .content-container {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+  }
+
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .sender {
+    font-family: Roboto, sans-serif;
+    font-weight: bold;
+    font-size: 0.75rem;
+    color: #202124;
+  }
+
+
+  .timestamp {
+    font-family: 'Roboto', sans-serif;
+    font-weight: normal;
+    font-size: 0.68rem;
+    color: #5f6368;
+  }
+
+  .content {
+    font-family: 'Roboto', sans-serif;
+    font-weight: normal;
+    font-size: 0.875rem;
+    color: #202124;
+    margin-top: 4px;
+  }
+
+  .mdc-text-field {
+    flex-grow: 1;
+    height: 36px;
+  }
+
+  .mdc-button {
+    margin-left: 8px;
+  }
+
+  .input-container {
+    position: fixed; /* Make input-container fixed */
+    bottom: 0; /* Position it at the bottom of the page */
+    left: 0;
+    right: 0;
+    background-color: white;
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    box-sizing: border-box;
+    border-top: 1px solid #ccc;
+  }
+
+  .message .content-container .content {
+    white-space: pre-wrap; /* Preserve whitespace, line breaks, and new lines */
+    word-wrap: break-word; /* Break long words to the next line */
+    overflow-wrap: break-word; /* Break long words to the next line (for modern browsers) */
+    max-width: 220px;
+  }
+
+</style>
+
+
+  </head>
+  <body>
+    <div class="chat-container">
+      <div id="messagesDisplay"></div>
+      <div class="input-container">
+        <div class="mdc-text-field mdc-text-field--outlined" id="message-text-field">
+          <input type="text" class="mdc-text-field__input" id="message-input" placeholder="Type your message...">
+          <div class="mdc-notched-outline">
+            <div class="mdc-notched-outline__leading"></div>
+            <div class="mdc-notched-outline__trailing"></div>
+          </div>
+        </div>
+        <button class="mdc-button mdc-button--raised" id="send-button">
+          <span class="mdc-button__label">Send</span>
+        </button>
+      </div>
+    </div>
+
+
+    <script>
+      //Material Design stuff
+      const textField = new mdc.textField.MDCTextField(document.querySelector('.mdc-text-field'));
+      const buttonRipple = new mdc.ripple.MDCRipple(document.querySelector('.mdc-button'));
+
+
+      // global vars
+      let localMessages = [];
+      let allLocalMessages = [];
+      let continuePolling = true;
+      let userEmail = '';
+      let userName = '';
+      let userPhotoUrl = '';
+      let agnesPhotoUrl = 'https://img.icons8.com/?size=512&id=kTuxVYRKeKEY&format=png';
+      let forceScroll = true;
+
+
+      document.addEventListener('DOMContentLoaded', async function() {
+        await fetchUserProfile();
+        pollMessages();
+
+        // Add any other initialization code here if needed.
+      });
+
+
+      function fetchUserProfile(){
+        google.script.run
+          .withSuccessHandler(function(profile) {
+            userEmail = profile.emailAddresses[0].value;
+            userName = profile.names[0].displayName;
+            userPhotoUrl = profile.photos[0].url;
+          })
+          .withFailureHandler(function(error) {
+            console.error('Error fetching user profile:', error);
+          })
+          .getUserProfile();
+      }
+
+
+      // Add an event listener for the Send button
+      document.getElementById("send-button").addEventListener("click", sendMessage);
+
+      document.getElementById('message-input').addEventListener('keypress', function (event) {
+        if (event.key === 'Enter') {
+          sendMessage();
+          event.preventDefault();
+        }
+      });
+
+
+      function pollMessages() {
+        if (!continuePolling) {
+          return;
+        }
+
+        google.script.run
+          .withSuccessHandler(function(messages) {
+          displayMessages(messages);
+
+          // Poll for new messages after 1 second if polling should continue
+          if (continuePolling) {
+            setTimeout(pollMessages, 1000);
+          }
+        })
+
+          .withFailureHandler(function(error) {
+            console.error('Error reading messages:', error);
+          })
+          .clientGetMessagesFromFirestore();
+      }
+
+
+      function displayMessages(messages) {
+        const mergedMessages = mergeMessages(messages, localMessages);
+        allLocalMessages = mergedMessages;
+        const messagesDisplay = document.getElementById('messagesDisplay');
+        messagesDisplay.innerHTML = ''; // Clear previous messages
+
+        mergedMessages.forEach(function(message) {
+          const messageElement = createMessageElement(message);
+          messagesDisplay.appendChild(messageElement);
+        });
+        scrollToBottom(); // Scroll to the bottom after displaying messages
+      }
+
+
+      function mergeMessages(firestoreMessages, localMessages) {
+        const messageMap = new Map();
+
+        firestoreMessages.forEach((message) => {
+          const key = message.timestamp;
+          messageMap.set(key, message);
+        });
+
+        localMessages.forEach((message) => {
+          const key = message.timestamp;
+          messageMap.set(key, message);
+        });
+
+        const mergedMessages = Array.from(messageMap.values());
+        mergedMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+        return mergedMessages;
+      }
+
+
+      function sendMessage() {
+        forceScroll = true;
+        const inputField = document.getElementById('message-input');
+        const message = inputField.value.trim();
+        if (message === '') {
+          return;
+        }
+
+        const sentMessage = {
+          sender: userEmail,
+          senderName: userName,
+          senderPhotoUrl: userPhotoUrl,
+          content: message,
+          timestamp: new Date().toISOString()
+        };
+        localMessages.push(sentMessage);
+
+        appendMessage(sentMessage);
+        scrollToBottom();
+
+        // Send the message to Firestore
+        if (message.length > 0) {
+          google.script.run
+            .withSuccessHandler(function() {
+              console.log("Message sent successfully.");
+              localMessages = localMessages.filter(
+                (localMessage) => localMessage.timestamp !== sentMessage.timestamp
+              );
+            })
+            .withFailureHandler(function(error) {
+              console.error("Failed to send message:", error);
+            })
+            .clientWriteToFirestore(sentMessage);
+        }
+
+        // Check if the message is addressing @Agnes
+        if (message.indexOf('@Agnes') !== -1) {
+          // Fetch recent messages for context (you may need to modify this based on your requirements)
+          const recentMessages = mergeMessages(localMessages, []);
+
+          google.script.run
+            .withSuccessHandler(function(gptResponse) {
+              // Handle GPT response, save it to Firestore, and display it in the sidebar
+              const agnesResponse = {
+                sender: 'Agnes',
+                senderName: 'Agnes',
+                senderPhotoUrl: agnesPhotoUrl, // Replace with Agnes' photo URL
+                content: gptResponse,
+                timestamp: new Date().toISOString()
+              };
+              localMessages.push(agnesResponse);
+              appendMessage(agnesResponse);
+              scrollToBottom();
+
+              google.script.run
+                .withSuccessHandler(function() {
+                  console.log("Agnes' response sent successfully.");
+                  localMessages = localMessages.filter(
+                    (localMessage) => localMessage.timestamp !== agnesResponse.timestamp
+                  );
+                })
+                .withFailureHandler(function(error) {
+                  console.error("Failed to send Agnes' response:", error);
+                })
+                .clientWriteToFirestore(agnesResponse);
+            })
+            .withFailureHandler(function(error) {
+              console.error("Failed to send message to GPT:", error);
+            })
+            .sendToAgnes(message, allLocalMessages.slice(-10));
+        }
+
+        inputField.value = '';
+        inputField.focus();
+      }
+
+
+      function createMessageElement(message) {
+
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('message');
+
+        const imgElement = document.createElement('img');
+        imgElement.src = message.senderPhotoUrl;
+        imgElement.alt = message.senderName + "'s profile picture";
+        imgElement.classList.add('profile-picture');
+
+        const contentContainer = document.createElement('div');
+        contentContainer.classList.add('content-container');
+
+        const contentElement = document.createElement('div');
+        contentElement.classList.add('content');
+        contentElement.innerHTML = message.content.replace(/\n/g, "<br>");
+
+        const headerElement = document.createElement('div');
+        headerElement.classList.add('header');
+
+        const senderElement = document.createElement('div');
+        senderElement.classList.add('sender');
+        senderElement.textContent = message.senderName;
+
+        const spacer = document.createElement('span');
+        spacer.innerHTML = '&nbsp;';
+
+        const timestampElement = document.createElement('div');
+        timestampElement.classList.add('timestamp');
+        timestampElement.textContent = new Date(message.timestamp).toLocaleString('en-US', {
+          weekday: 'short',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        });
+
+        headerElement.appendChild(senderElement);
+        headerElement.appendChild(spacer);
+        headerElement.appendChild(timestampElement);
+
+        contentContainer.appendChild(headerElement);
+        contentContainer.appendChild(contentElement);
+
+        messageElement.appendChild(imgElement);
+        messageElement.appendChild(contentContainer);
+
+        return messageElement;
+      }
+
+
+      function scrollToBottom() {
+        if (forceScroll) {
+          forceScroll = false;
+          const messagesDisplay = document.getElementById('messagesDisplay');
+          messagesDisplay.scrollTop = messagesDisplay.scrollHeight;
+        }
+      }
+
+      function appendMessage(message) {
+        const messagesDisplay = document.getElementById('messagesDisplay');
+        const messageElement = createMessageElement(message);
+        messagesDisplay.appendChild(messageElement);
+      }
+
+    </script>
+  </body>
+</html>

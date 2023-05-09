@@ -1,0 +1,47 @@
+{
+  "timeZone": "Europe/Berlin",
+  "dependencies": {
+    "libraries": [
+      {
+        "userSymbol": "FirestoreGoogleAppsScript",
+        "version": "1",
+        "libraryId": "1t5zxR2-DRnEkv5WNszITOSkFtHm5bYduh1M4MEJ_re4DMo1dsDtu1uuf",
+        "developmentMode": false
+      }
+    ],
+    "enabledAdvancedServices": [
+      {
+        "userSymbol": "People",
+        "version": "v1",
+        "serviceId": "peopleapi"
+      }
+    ]
+  },
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/presentations.currentonly",
+    "https://www.googleapis.com/auth/script.external_request",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/script.container.ui",
+    "https://www.googleapis.com/auth/peopleapi.readonly",
+    "profile"
+  ],
+  "addOns": {
+    "common": {
+      "name": "Slides Chat Add-on",
+      "logoUrl": "https://placehold.co/256?text=Slides+Chat&font=oswald",
+      "universalActions": [
+        {
+          "label": "Open chat",
+          "runFunction": "showSidebar"
+        }
+      ]
+    },
+    "slides": {
+      "homepageTrigger": {
+        "runFunction": "onHomePage"
+      }
+    }
+  }
+}
