@@ -35,7 +35,7 @@
   const apiKey = getGPTKey();
   const orgId = getGPTOrgId();
   const temperature = 0.1;
-  const maxTokens = 320;
+  const maxTokens = 250;
 
   // Map recentMessages to the expected format
   const formattedRecentMessages = recentMessages.map((message) => {

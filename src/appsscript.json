@@ -1,24 +1,23 @@
 {
   "timeZone": "Europe/Berlin",
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
   "dependencies": {
-    "libraries": [
-      {
-        "userSymbol": "FirestoreGoogleAppsScript",
-        "version": "1",
-        "libraryId": "1t5zxR2-DRnEkv5WNszITOSkFtHm5bYduh1M4MEJ_re4DMo1dsDtu1uuf",
-        "developmentMode": false
-      }
-    ],
     "enabledAdvancedServices": [
       {
         "userSymbol": "People",
-        "version": "v1",
-        "serviceId": "peopleapi"
+        "serviceId": "peopleapi",
+        "version": "v1"
+      }
+    ],
+    "libraries": [
+      {
+        "userSymbol": "FirestoreGoogleAppsScript",
+        "libraryId": "1t5zxR2-DRnEkv5WNszITOSkFtHm5bYduh1M4MEJ_re4DMo1dsDtu1uuf",
+        "version": "1"
       }
     ]
   },
-  "exceptionLogging": "STACKDRIVER",
-  "runtimeVersion": "V8",
   "oauthScopes": [
     "https://www.googleapis.com/auth/presentations.currentonly",
     "https://www.googleapis.com/auth/script.external_request",
@@ -26,6 +25,11 @@
     "https://www.googleapis.com/auth/script.container.ui",
     "https://www.googleapis.com/auth/peopleapi.readonly",
     "profile"
+  ],
+  "urlFetchWhitelist": [
+    "https://api.openai.com/v1/chat/completions",
+    "https://oauth2.googleapis.com/token",
+    "https://firestore.googleapis.com/v1/projects/slides-chat-add-on/"
   ],
   "addOns": {
     "common": {

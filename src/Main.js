@@ -27,7 +27,7 @@ function onInstall(e) {
 function onOpen() {
   SlidesApp.getUi()
     .createAddonMenu()
-    .addItem('Open Chat', 'showSidebar')
+    .addItem('Chat', 'showSidebar')
     .addToUi();
 }
 
